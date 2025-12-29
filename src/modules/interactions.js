@@ -1,5 +1,5 @@
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.159/build/three.module.js';
+import * as THREE from 'three';
 
 export class InteractionManager {
     constructor(scene, renderer, camera) {
@@ -8,7 +8,6 @@ export class InteractionManager {
         this.camera = camera;
         this.reticle = null;
         this.hitTestSource = null;
-        this.isWallMode = false;
 
         this.initReticle();
     }
@@ -33,23 +32,11 @@ export class InteractionManager {
         if (this.hitTestSource && frame) {
             const hits = frame.getHitTestResults(this.hitTestSource);
             if (hits.length > 0) {
-                this.isWallMode = false;
                 this.reticle.visible = true;
                 const pose = hits[0].getPose(this.renderer.xr.getReferenceSpace());
                 this.reticle.matrix.fromArray(pose.transform.matrix);
             } else {
-                this.isWallMode = true;
-                this.reticle.visible = true;
-                // Wall Mode Fallback: 2m in front
-                const viewDir = new THREE.Vector3();
-                this.camera.getWorldDirection(viewDir);
-                const targetPos = this.camera.position.clone().add(viewDir.multiplyScalar(2.0));
-
-                this.reticle.position.copy(targetPos);
-                this.reticle.rotation.set(0, 0, 0);
-                this.reticle.lookAt(this.camera.position);
-                this.reticle.rotateX(Math.PI / 2);
-                this.reticle.updateMatrix();
+                this.reticle.visible = false;
             }
         }
     }

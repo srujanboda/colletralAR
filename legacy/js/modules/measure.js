@@ -13,6 +13,16 @@ export class MeasureManager {
     }
 
     addPoint(position) {
+        // Prevent duplicate points (e.g. from double taps)
+        if (this.points.length > 0) {
+            const lastPoint = this.points[this.points.length - 1];
+            if (position.distanceTo(lastPoint) < 0.1) {
+                // Too close to last point, ignore
+                console.log("Point too close, ignoring");
+                return;
+            }
+        }
+
         const p = position.clone();
         const dot = new THREE.Mesh(
             new THREE.SphereGeometry(0.016),

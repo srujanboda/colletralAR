@@ -98,10 +98,9 @@ class App {
     this.interactionManager.update(frame, session);
 
     // Update UI info based on WallMode from interaction
-    const isWallMode = this.interactionManager.isWallMode;
 
     if (this.measureManager.getPointCount() < 2) {
-      const wallText = isWallMode ? `<span style="color:#00ffff">WALL MODE</span> – Tap to place` : `Total: <span style="color:#ff4444">0.00 ${this.currentUnit}</span> • 0 pts`;
+      const wallText = `Total: <span style="color:#ff4444">0.00 ${this.currentUnit}</span> • 0 pts`;
       this.ui.updateInfo(wallText);
       // Also manage canvas opacity if needed (originally canvas opacity changed)
     } else {
