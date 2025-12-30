@@ -24,6 +24,14 @@ const ARScene = forwardRef((props, ref) => {
             logicRef.current.currentUnit = u;
             logicRef.current.measureManager?.setUnit(u);
             updateUI();
+        },
+        cycleUnit: () => {
+            const units = ['m', 'cm', 'in', 'ft'];
+            const current = logicRef.current.currentUnit;
+            const next = units[(units.indexOf(current) + 1) % units.length];
+            logicRef.current.currentUnit = next;
+            // logicRef.current.measureManager?.setUnit(next); // Assuming MeasureManager handles this or we just format
+            updateUI();
         }
     }));
 
