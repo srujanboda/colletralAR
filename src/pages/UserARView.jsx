@@ -40,23 +40,33 @@ const UserARView = () => {
             <ARScene ref={arRef} onStatsUpdate={setStats} />
 
             {/* Main UI Container - Hooks generic beforexrselect prevention */}
-            <div ref={uiRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+            <div ref={uiRef} style={{ 
+                position: 'fixed', 
+                inset: 0, 
+                pointerEvents: 'none',
+                zIndex: 1000,
+                width: '100vw',
+                height: '100vh'
+            }}>
 
-                {/* Stats Bar (Top) */}
+                {/* Stats Bar (Top Center) */}
                 <div className="glass-panel info-badge" style={{
                     position: 'absolute',
-                    top: 40,
+                    top: 20,
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    padding: '8px 24px',
+                    padding: '10px 28px',
                     borderRadius: 30,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    pointerEvents: 'auto'
+                    pointerEvents: 'auto',
+                    zIndex: 1001,
+                    whiteSpace: 'nowrap',
+                    minWidth: 'fit-content'
                 }}>
-                    <div style={{ fontSize: 12, opacity: 0.8, textTransform: 'uppercase', letterSpacing: 1 }}>Total Distance</div>
-                    <div style={{ fontSize: 28, fontWeight: 700 }}>
+                    <div style={{ fontSize: 11, opacity: 0.8, textTransform: 'uppercase', letterSpacing: 1.5 }}>Total Distance</div>
+                    <div style={{ fontSize: 28, fontWeight: 700, lineHeight: 1.2 }}>
                         <span style={{ color: '#4cc9f0' }}>{stats.total.split(' ')[0]}</span>
                         <span style={{ fontSize: 16, marginLeft: 4 }}>{stats.total.split(' ')[1]}</span>
                     </div>
@@ -71,15 +81,16 @@ const UserARView = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 16,
-                    pointerEvents: 'auto'
+                    pointerEvents: 'auto',
+                    zIndex: 1001
                 }}>
                     {/* Unit Toggle */}
                     <button
                         className="glass-btn"
                         onClick={(e) => { e.stopPropagation(); arRef.current?.cycleUnit(); }}
-                        style={{ width: 56, height: 56, borderRadius: '50%' }}
+                        style={{ width: 56, height: 56, borderRadius: '50%', fontSize: 10 }}
                     >
-                        <span style={{ fontSize: 14, fontWeight: 'bold' }}>UNIT</span>
+                        <span style={{ fontSize: 10, fontWeight: 'bold' }}>UNIT</span>
                     </button>
 
                     {/* Plan Parser */}
@@ -88,7 +99,7 @@ const UserARView = () => {
                         onClick={(e) => { e.stopPropagation(); setShowPlanParser(true); }}
                         style={{ width: 56, height: 56, borderRadius: '50%' }}
                     >
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                     </button>
                 </div>
 
@@ -96,41 +107,43 @@ const UserARView = () => {
                 {stats.count > 0 && (
                     <div className="glass-panel" style={{
                         position: 'absolute',
-                        bottom: 40,
+                        bottom: 80,
                         left: '50%',
-                        transform: 'translateX(-50%)', // Center it
-                        padding: '12px', // Inner padding
-                        borderRadius: 24, // Pill shape
+                        transform: 'translateX(-50%)',
+                        padding: '12px 16px',
+                        borderRadius: 24,
                         display: 'flex',
                         gap: 12,
                         pointerEvents: 'auto',
-                        width: 'auto', // Auto width based on content
-                        maxWidth: '90%' // Max width margin
+                        zIndex: 1001,
+                        width: 'auto',
+                        maxWidth: '90%',
+                        flexWrap: 'nowrap'
                     }}>
                         <button
                             className="glass-btn"
                             onClick={(e) => { e.stopPropagation(); arRef.current?.undo(); }}
-                            style={{ borderRadius: 16, padding: '0 20px', height: 44 }}
+                            style={{ borderRadius: 16, padding: '0 16px', height: 44, fontSize: 14 }}
                         >
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path></svg>
                             Undo
                         </button>
 
                         <button
                             className="glass-btn glass-btn-primary"
                             onClick={(e) => { e.stopPropagation(); arRef.current?.startNewLine(); }}
-                            style={{ borderRadius: 16, padding: '0 20px', height: 44 }}
+                            style={{ borderRadius: 16, padding: '0 16px', height: 44, fontSize: 14 }}
                         >
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
                             New Line
                         </button>
 
                         <button
                             className="glass-btn glass-btn-danger"
                             onClick={(e) => { e.stopPropagation(); arRef.current?.reset(); }}
-                            style={{ borderRadius: 16, padding: '0 20px', height: 44 }}
+                            style={{ borderRadius: 16, padding: '0 16px', height: 44, fontSize: 14 }}
                         >
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                             Reset
                         </button>
                     </div>

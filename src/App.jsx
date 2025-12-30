@@ -4,6 +4,7 @@ import Landing from './pages/Landing';
 import ReviewerDashboard from './pages/ReviewerDashboard';
 import UserARView from './pages/UserARView';
 import './index.css';
+import './App.css';
 
 function App() {
   return (
