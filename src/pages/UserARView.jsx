@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ARScene from '../components/ARScene';
 import { usePeer } from '../hooks/usePeer';
