@@ -31,11 +31,21 @@ export const usePeer = (role, code) => {
 
         p.on('call', (incomingCall) => {
             console.log("Incoming call...", incomingCall);
+            setStatus(`Incoming call from ${incomingCall.peer}...`);
             // Answer automatically (or prompt)
-            // We need a local stream to answer with? Or receive only?
-            // Reviewer answers.
-            incomingCall.answer();
-            setupCallEvents(incomingCall);
+            // Reviewer needs a local stream to answer, but for receiving only, we can pass null
+            // However, PeerJS requires a stream. Let's get audio-only stream for reviewer.
+            navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+                .then(stream => {
+                    localStreamRef.current = stream;
+                    incomingCall.answer(stream);
+                    setupCallEvents(incomingCall);
+                    setStatus(`Call connected with ${incomingCall.peer}`);
+                })
+                .catch(err => {
+                    console.error("Failed to get media for answering call:", err);
+                    setStatus(`Error answering call: ${err.message}`);
+                });
         });
 
         p.on('error', (err) => {
@@ -73,11 +83,20 @@ export const usePeer = (role, code) => {
         activeCall.on('stream', (stream) => {
             console.log("Remote Stream received");
             setRemoteStream(stream);
+            if (role === 'reviewer') {
+                setStatus(`Connected - Receiving stream from ${activeCall.peer}`);
+            } else {
+                setStatus(`Connected - Streaming to ${activeCall.peer}`);
+            }
         });
         activeCall.on('close', () => {
             setStatus("Call Ended");
             setCall(null);
             setRemoteStream(null);
+        });
+        activeCall.on('error', (err) => {
+            console.error("Call error:", err);
+            setStatus(`Call Error: ${err.message || err.type}`);
         });
     };
 
