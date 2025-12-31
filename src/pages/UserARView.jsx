@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import ARScene from '../components/ARScene';
 import { usePeer } from '../hooks/usePeer';
 import PlanParser from '../components/PlanParser';
