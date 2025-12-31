@@ -1,12 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import PlanParser from '../components/PlanParser';
 import { usePeer } from '../hooks/usePeer';
 
 const ReviewerDashboard = () => {
     const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
     const code = searchParams.get('code');
-    const { status, remoteStream } = usePeer('reviewer', code);
+    const { status, remoteStream, endCall } = usePeer('reviewer', code);
     const videoRef = useRef(null);
 
     useEffect(() => {
@@ -15,12 +16,26 @@ const ReviewerDashboard = () => {
         }
     }, [remoteStream]);
 
+    const handleEndCall = () => {
+        endCall();
+        navigate('/');
+    };
+
     return (
         <div style={{ padding: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <h1>Reviewer Dashboard</h1>
-                <div style={{ padding: '10px 20px', background: '#444', borderRadius: 8 }}>
-                    Code: <strong>{code}</strong> ({status})
+                <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
+                    <div style={{ padding: '10px 20px', background: '#333', borderRadius: 8, color: 'white' }}>
+                        Code: <strong>{code}</strong> ({status})
+                    </div>
+                    <button
+                        onClick={handleEndCall}
+                        className="glass-btn glass-btn-danger"
+                        style={{ borderRadius: 8, padding: '10px 20px' }}
+                    >
+                        End Call
+                    </button>
                 </div>
             </div>
 

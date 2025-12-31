@@ -7,7 +7,15 @@ import PlanParser from '../components/PlanParser';
 const UserARView = () => {
     const [searchParams] = useSearchParams();
     const code = searchParams.get('code');
-    const { status } = usePeer('user', code); // Auto-calls reviewer
+    const [arActive, setArActive] = useState(false);
+    const { status, endCall } = usePeer('user', code);
+    const navigate = useNavigate();
+
+    const handleEndCall = () => {
+        endCall();
+        navigate('/');
+    };
+
     const arRef = useRef(null);
     const [stats, setStats] = useState({ total: "0.00 m", count: 0 });
     const [showPlanParser, setShowPlanParser] = useState(false);
@@ -37,12 +45,19 @@ const UserARView = () => {
 
     return (
         <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}>
-            <ARScene ref={arRef} onStatsUpdate={setStats} />
+            <ARScene
+                ref={arRef}
+                onStatsUpdate={setStats}
+                onSessionStart={() => setArActive(true)}
+                onSessionEnd={() => {
+                    setArActive(false);
+                }}
+            />
 
             {/* Main UI Container - Hooks generic beforexrselect prevention */}
-            <div ref={uiRef} style={{ 
-                position: 'fixed', 
-                inset: 0, 
+            <div ref={uiRef} style={{
+                position: 'fixed',
+                inset: 0,
                 pointerEvents: 'none',
                 zIndex: 1000,
                 width: '100vw',
@@ -71,6 +86,26 @@ const UserARView = () => {
                         <span style={{ fontSize: 16, marginLeft: 4 }}>{stats.total.split(' ')[1]}</span>
                     </div>
                 </div>
+
+                {/* End Call Button - Visible when AR is inactive */}
+                {!arActive && (
+                    <div style={{
+                        position: 'absolute',
+                        top: 20,
+                        right: 20,
+                        pointerEvents: 'auto',
+                        zIndex: 1002
+                    }}>
+                        <button
+                            className="glass-btn glass-btn-danger"
+                            onClick={handleEndCall}
+                            style={{ borderRadius: 12, padding: '10px 20px', fontSize: 13, fontWeight: '600' }}
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+                            End Call
+                        </button>
+                    </div>
+                )}
 
                 {/* Right Dock (Tools) */}
                 <div style={{

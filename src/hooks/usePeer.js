@@ -100,5 +100,18 @@ export const usePeer = (role, code) => {
         });
     };
 
-    return { peer, call, remoteStream, status };
+    const endCall = () => {
+        if (call) {
+            call.close();
+        }
+        if (peer) {
+            peer.destroy();
+        }
+        setCall(null);
+        setPeer(null);
+        setRemoteStream(null);
+        setStatus("Call Ended Manually");
+    };
+
+    return { peer, call, remoteStream, status, endCall };
 };

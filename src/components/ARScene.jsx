@@ -51,8 +51,14 @@ const ARScene = forwardRef((props, ref) => {
         // 1. Scene
         mgr.sceneManager = new SceneManager(
             (t, frame) => render(t, frame),
-            () => setStatusText("AR Session Active"),
-            () => setStatusText("AR Session Ended")
+            () => {
+                setStatusText("AR Session Active");
+                if (props.onSessionStart) props.onSessionStart();
+            },
+            () => {
+                setStatusText("AR Session Ended");
+                if (props.onSessionEnd) props.onSessionEnd();
+            }
         );
         mgr.sceneManager.init();
 
