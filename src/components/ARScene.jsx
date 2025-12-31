@@ -106,13 +106,8 @@ const ARScene = forwardRef((props, ref) => {
 
     return (
         <div ref={containerRef} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1 }}>
-            {/* Styling mostly handled by WebXR overlay, but we render nothing here basically as Three.js appends canvas to body usually or we should target ref */}
-            {/* SceneManager in original code appended to body. Let's fix SceneManager later to append to container if possible, but body is fine for AR. */}
-
-            {/* We emit the UI state up or render usage instructions here? 
-                Actually the parent handles UI overlay. We just emit stats via props? 
-                or expose them? 
-            */}
+            {/* Status pass-up */}
+            {props.onStatusUpdate && props.onStatusUpdate(statusText)}
             {props.onStatsUpdate && props.onStatsUpdate(stats)}
         </div>
     );

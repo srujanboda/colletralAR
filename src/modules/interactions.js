@@ -15,76 +15,67 @@ export class InteractionManager {
 
     initReticle() {
         // Create a more visible reticle ring
-        const geometry = new THREE.RingGeometry(0.08, 0.10, 32);
-        geometry.rotateX(-Math.PI / 2);
-        
-        const material = new THREE.MeshBasicMaterial({ 
-            color: 0x00ff88,
-            transparent: true,
-            opacity: 0.9,
-            side: THREE.DoubleSide
-        });
-        
-        this.reticle = new THREE.Mesh(geometry, material);
+        const group = new THREE.Group();
+
+        const ringGeom = new THREE.RingGeometry(0.04, 0.05, 32);
+        ringGeom.rotateX(-Math.PI / 2);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0x4cc9f0, transparent: true, opacity: 0.8 });
+        const ring = new THREE.Mesh(ringGeom, ringMat);
+        group.add(ring);
+
+        // Add a pulsing center dot
+        const dotGeom = new THREE.CircleGeometry(0.005, 16);
+        dotGeom.rotateX(-Math.PI / 2);
+        const dotMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const dot = new THREE.Mesh(dotGeom, dotMat);
+        group.add(dot);
+
+        this.reticle = group;
         this.reticle.matrixAutoUpdate = false;
         this.reticle.visible = false;
         this.scene.add(this.reticle);
     }
 
     update(frame, session) {
-        // Initialize hit test source (async, but only once)
-        if (!this.hitTestSource && session && !this.isRequestingHitTest) {
+        if (!session) return;
+
+        // 1. Initialize hit test source using 'viewer' space (offset from camera)
+        if (!this.hitTestSource && !this.isRequestingHitTest) {
             this.isRequestingHitTest = true;
-            // Use 'local' reference space for hit testing on surfaces
-            session.requestReferenceSpace('local')
-                .then(referenceSpace => {
-                    return session.requestHitTestSource({ space: referenceSpace });
-                })
-                .then(hitTestSource => {
-                    this.hitTestSource = hitTestSource;
+
+            session.requestReferenceSpace('viewer').then((referenceSpace) => {
+                session.requestHitTestSource({ space: referenceSpace }).then((source) => {
+                    this.hitTestSource = source;
                     this.isRequestingHitTest = false;
-                    console.log("Hit test source created successfully");
-                })
-                .catch(error => {
-                    console.error("Failed to create hit test source with 'local':", error);
-                    // Try alternative: 'local-floor' if 'local' fails
-                    return session.requestReferenceSpace('local-floor')
-                        .then(referenceSpace => {
-                            return session.requestHitTestSource({ space: referenceSpace });
-                        })
-                        .then(hitTestSource => {
-                            this.hitTestSource = hitTestSource;
-                            this.isRequestingHitTest = false;
-                            console.log("Hit test source created with local-floor");
-                        })
-                        .catch(fallbackError => {
-                            console.error("Failed to create hit test source with local-floor:", fallbackError);
-                            this.isRequestingHitTest = false;
-                        });
+                    console.log("Hit test source created with 'viewer' space");
                 });
+            }).catch(err => {
+                console.error("Error requesting hit test source:", err);
+                this.isRequestingHitTest = false;
+            });
         }
 
+        // 2. Process hit test results
         if (this.hitTestSource && frame) {
-            try {
-                const hits = frame.getHitTestResults(this.hitTestSource);
-                if (hits.length > 0) {
-                    const pose = hits[0].getPose(this.renderer.xr.getReferenceSpace());
-                    if (pose) {
-                        this.reticle.visible = true;
-                        this.reticle.matrix.fromArray(pose.transform.matrix);
-                    } else {
-                        this.reticle.visible = false;
-                    }
+            const referenceSpace = this.renderer.xr.getReferenceSpace();
+            if (!referenceSpace) return;
+
+            const hitTestResults = frame.getHitTestResults(this.hitTestSource);
+
+            if (hitTestResults.length > 0) {
+                const hit = hitTestResults[0];
+                const pose = hit.getPose(referenceSpace);
+
+                if (pose) {
+                    this.reticle.visible = true;
+                    this.reticle.matrix.fromArray(pose.transform.matrix);
+                    this.reticle.updateMatrixWorld(true);
                 } else {
                     this.reticle.visible = false;
                 }
-            } catch (error) {
-                console.error("Error getting hit test results:", error);
+            } else {
                 this.reticle.visible = false;
             }
-        } else if (!this.hitTestSource && session) {
-            // Hit test source not ready yet, keep reticle hidden
-            this.reticle.visible = false;
         }
     }
 
