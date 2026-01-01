@@ -32,11 +32,12 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  /* Start from top to prevent clipping */
   min-height: 100vh;
-  /* Changed from height: 100% to support scrolling */
   text-align: center;
-  padding: 2rem 0;
+  padding: 5vh 1rem;
+  box-sizing: border-box;
 }
 
 .role-card {
