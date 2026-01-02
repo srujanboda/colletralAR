@@ -57,14 +57,16 @@ const ReviewerDashboard = () => {
                     <h3 style={{ marginBottom: 15 }}>User View</h3>
                     <div style={{
                         width: '100%',
-                        aspectRatio: '16 / 9',
+                        aspectRatio: '9 / 16',
+                        maxHeight: 'calc(100vh - 180px)',
                         background: '#000',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         borderRadius: 12,
                         overflow: 'hidden',
-                        boxShadow: '0 0 20px rgba(0,123,255,0.1)'
+                        boxShadow: '0 0 20px rgba(0,123,255,0.1)',
+                        margin: '0 auto'
                     }}>
                         <video ref={videoRef} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'contain' }}></video>
                     </div>
