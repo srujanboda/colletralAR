@@ -73,8 +73,8 @@ const ReviewerDashboard = () => {
                 </div>
 
                 {/* Plan Column */}
-                <div>
-                    <h3>Floor Plan Verification</h3>
+                <div style={{ background: '#222', borderRadius: 12, padding: 20, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
+                    <h3 style={{ marginBottom: 15 }}>Floor Plan Verification</h3>
                     <PlanParser role="reviewer" sendData={sendData} remoteData={remoteData} isDataConnected={isDataConnected} />
                 </div>
             </div>
