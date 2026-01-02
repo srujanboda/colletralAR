@@ -115,11 +115,16 @@ const ARScene = forwardRef((props, ref) => {
         setStats({ total: text, count });
     };
 
+    useEffect(() => {
+        if (props.onStatusUpdate) props.onStatusUpdate(statusText);
+    }, [statusText, props.onStatusUpdate]);
+
+    useEffect(() => {
+        if (props.onStatsUpdate) props.onStatsUpdate(stats);
+    }, [stats, props.onStatsUpdate]);
+
     return (
         <div ref={containerRef} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: -1 }}>
-            {/* Status pass-up */}
-            {props.onStatusUpdate && props.onStatusUpdate(statusText)}
-            {props.onStatsUpdate && props.onStatsUpdate(stats)}
         </div>
     );
 });

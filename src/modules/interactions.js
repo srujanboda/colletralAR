@@ -14,23 +14,12 @@ export class InteractionManager {
     }
 
     initReticle() {
-        // Create a more visible reticle ring
-        const group = new THREE.Group();
-
-        const ringGeom = new THREE.RingGeometry(0.04, 0.05, 32);
+        // Simple, highly visible legacy-style reticle
+        const ringGeom = new THREE.RingGeometry(0.08, 0.10, 32);
         ringGeom.rotateX(-Math.PI / 2);
-        const ringMat = new THREE.MeshBasicMaterial({ color: 0x4cc9f0, transparent: true, opacity: 0.8 });
-        const ring = new THREE.Mesh(ringGeom, ringMat);
-        group.add(ring);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.9 });
+        this.reticle = new THREE.Mesh(ringGeom, ringMat);
 
-        // Add a pulsing center dot
-        const dotGeom = new THREE.CircleGeometry(0.005, 16);
-        dotGeom.rotateX(-Math.PI / 2);
-        const dotMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        const dot = new THREE.Mesh(dotGeom, dotMat);
-        group.add(dot);
-
-        this.reticle = group;
         this.reticle.matrixAutoUpdate = false;
         this.reticle.visible = false;
         this.scene.add(this.reticle);
