@@ -22,7 +22,7 @@ const ReviewerDashboard = () => {
     };
 
     return (
-        <div style={{ padding: '20px 40px', maxWidth: 1600, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ padding: '20px 2%', maxWidth: '100%', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <h1>Reviewer Dashboard</h1>
                 <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
@@ -51,7 +51,7 @@ const ReviewerDashboard = () => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                 {/* Video Column */}
                 <div style={{ background: '#222', borderRadius: 12, padding: 20, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
                     <h3 style={{ marginBottom: 15 }}>User View</h3>
