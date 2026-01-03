@@ -209,6 +209,13 @@ export const usePeer = (role, code, arActive = false) => {
     const endCall = () => {
         if (call) call.close();
         if (peer) peer.destroy();
+
+        // Stop all local tracks (Camera/Mic)
+        if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach(track => track.stop());
+            localStreamRef.current = null;
+        }
+
         setCall(null);
         setPeer(null);
         setRemoteStream(null);

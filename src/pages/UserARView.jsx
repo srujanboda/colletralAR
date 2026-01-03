@@ -28,6 +28,7 @@ const UserARView = () => {
                 ref={arSceneRef}
                 onStatusUpdate={setArStatus}
                 onStatsUpdate={setStats}
+                onSessionEnd={() => navigate('/')}
             />
 
             {/* Overlay UI - Top Center Pill */}

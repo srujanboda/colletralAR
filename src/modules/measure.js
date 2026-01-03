@@ -131,14 +131,17 @@ export class MeasureManager {
 
         const lastPoint = this.points[this.points.length - 1];
         const geometry = new THREE.BufferGeometry().setFromPoints([lastPoint, reticlePos]);
-        const material = new THREE.LineBasicMaterial({
-            color: 0x007bff,
+        const material = new THREE.LineDashedMaterial({
+            color: 0xffffff,
+            dashSize: 0.02,
+            gapSize: 0.01,
             transparent: true,
-            opacity: 0.5,
+            opacity: 0.8,
             linewidth: 2
         });
 
         this.previewLine = new THREE.Line(geometry, material);
+        this.previewLine.computeLineDistances();
         this.scene.add(this.previewLine);
     }
 
