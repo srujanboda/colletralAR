@@ -19,7 +19,7 @@ const Landing = () => {
 
     return (
         <div className="landing-container">
-            <h1>AR Measure Call</h1>
+            <h1>Collateral AR</h1>
 
             <div className="role-card">
                 <h2>Reviewer</h2>

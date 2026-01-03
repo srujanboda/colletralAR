@@ -37,11 +37,14 @@ const UserARView = () => {
                 top: 25,
                 left: '50%',
                 transform: 'translateX(-50%)',
-                padding: '10px 30px',
+                padding: '12px 30px',
                 textAlign: 'center',
                 minWidth: 160,
                 pointerEvents: 'none',
-                zIndex: 10
+                zIndex: 10,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2
             }}>
                 <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.45)', letterSpacing: '2px', marginBottom: 2, textTransform: 'uppercase' }}>Session Distance</div>
                 <div style={{
@@ -50,6 +53,12 @@ const UserARView = () => {
                 }}>
                     {stats.total.split(' ')[0]} <span style={{ fontSize: 15, color: '#fff', opacity: 0.6, fontWeight: 500 }}>{stats.total.split(' ')[1]}</span>
                 </div>
+                {stats.area && (
+                    <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                        <div style={{ fontSize: 9, fontWeight: 800, color: '#00BFFF', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 2 }}>Area</div>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{stats.area}</div>
+                    </div>
+                )}
             </div >
 
             {/* Top Right Controls - Power Off / End Call Icon */}
@@ -79,7 +88,15 @@ const UserARView = () => {
                 <button
                     onClick={() => arSceneRef.current?.cycleUnit()}
                     className="glass-btn"
-                    style={{ width: 52, height: 52, borderRadius: '50%', fontSize: 11, fontWeight: 700, background: 'rgba(0,123,255,0.4)', borderColor: 'rgba(0,123,255,0.3)' }}
+                    style={{
+                        width: 52,
+                        height: 52,
+                        borderRadius: '50%',
+                        fontSize: 11,
+                        fontWeight: 800,
+                        background: 'rgba(255,255,255,0.12)',
+                        borderColor: 'rgba(255,255,255,0.2)'
+                    }}
                 >
                     UNIT
                 </button>
@@ -90,8 +107,8 @@ const UserARView = () => {
                         width: 52,
                         height: 52,
                         borderRadius: '50%',
-                        background: showPlan ? '#007bff' : 'rgba(255,255,255,0.18)',
-                        borderColor: showPlan ? '#007bff' : 'rgba(255,255,255,0.3)',
+                        background: showPlan ? 'rgba(0,191,255,0.8)' : 'rgba(0,191,255,0.4)',
+                        borderColor: 'rgba(0,191,255,0.3)',
                         borderWidth: '2px'
                     }}
                 >
@@ -112,8 +129,8 @@ const UserARView = () => {
                         borderRadius: '50%',
                         margin: '0 auto',
                         opacity: 1,
-                        background: 'rgba(255,255,255,0.18)',
-                        border: '2px solid rgba(255,255,255,0.3)'
+                        background: 'rgba(0,191,255,0.4)',
+                        border: '2px solid rgba(0,191,255,0.3)'
                     }}
                     title="Flip Camera"
                 >

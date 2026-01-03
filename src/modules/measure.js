@@ -14,11 +14,22 @@ export class MeasureManager {
     }
 
     addPoint(position) {
-        // Prevent duplicate points (e.g. from double taps)
+        // 1. Detect closed loop (snapping to first point)
+        if (this.points.length >= 3) {
+            const firstPoint = this.points[0];
+            if (position.distanceTo(firstPoint) < 0.15) {
+                // Close the loop
+                this.isClosed = true;
+                this.updateLine();
+                return;
+            }
+        }
+        this.isClosed = false;
+
+        // 2. Prevent duplicate points
         if (this.points.length > 0) {
             const lastPoint = this.points[this.points.length - 1];
             if (position.distanceTo(lastPoint) < 0.1) {
-                // Too close to last point, ignore
                 console.log("Point too close, ignoring");
                 return;
             }
@@ -27,10 +38,17 @@ export class MeasureManager {
         const p = position.clone();
         const dot = new THREE.Mesh(
             new THREE.SphereGeometry(0.012),
-            new THREE.MeshBasicMaterial({ color: 0x007bff }) // Professional blue matching reticle
+            new THREE.MeshBasicMaterial({
+                color: 0x007bff,
+                transparent: true,
+                opacity: 0.9
+            })
         );
         dot.position.copy(p);
         this.scene.add(dot);
+
+        // Animation state for the dot
+        dot.userData.phase = Math.random() * Math.PI * 2;
 
         this.pointMeshes.push(dot);
         this.points.push(p);
@@ -38,7 +56,30 @@ export class MeasureManager {
         this.updateLine();
     }
 
+    updateAnimations(time) {
+        // Pulse currently active dots
+        this.pointMeshes.forEach(dot => {
+            const phase = dot.userData.phase + time * 0.003;
+            const scale = 1 + Math.sin(phase) * 0.2;
+            dot.scale.set(scale, scale, scale);
+        });
+
+        // Pulse archived dots similarly
+        this.allChains.forEach(chain => {
+            chain.meshes.forEach(dot => {
+                const phase = dot.userData.phase + time * 0.002;
+                const scale = 1 + Math.sin(phase) * 0.15;
+                dot.scale.set(scale, scale, scale);
+            });
+        });
+    }
+
     undoLastPoint() {
+        if (this.isClosed) {
+            this.isClosed = false;
+            this.updateLine();
+            return;
+        }
         if (this.points.length === 0) return;
         const mesh = this.pointMeshes.pop();
         this.scene.remove(mesh);
@@ -47,6 +88,7 @@ export class MeasureManager {
     }
 
     resetAll() {
+        this.isClosed = false;
         // Clear history chains
         this.allChains.forEach(c => {
             c.meshes.forEach(m => this.scene.remove(m));
@@ -80,14 +122,14 @@ export class MeasureManager {
             points: [...this.points],
             meshes: [...this.pointMeshes],
             line: this.line,
-            labels: [...this.labels]
+            labels: [...this.labels],
+            isClosed: this.isClosed
         });
         this.points = [];
         this.pointMeshes = [];
-        this.line = null; // Don't remove from scene, just detach from current ref
+        this.line = null;
         this.labels = [];
-
-        // Note: The previous objects remain in the scene until resetAll is called
+        this.isClosed = false;
     }
 
     updateLine() {
@@ -96,21 +138,21 @@ export class MeasureManager {
         this.labels.forEach(l => this.scene.remove(l));
         this.labels = [];
 
-        if (this.points.length < 2) {
-            // Nothing to draw
-            return;
-        }
+        if (this.points.length < 2) return;
+
+        // If closed, add first point to the end for line drawing
+        const drawPoints = this.isClosed ? [...this.points, this.points[0]] : this.points;
 
         this.line = new THREE.Line(
-            new THREE.BufferGeometry().setFromPoints(this.points),
+            new THREE.BufferGeometry().setFromPoints(drawPoints),
             new THREE.LineBasicMaterial({ color: 0xff0044, linewidth: 6 })
         );
         this.scene.add(this.line);
 
-        // Add labels
-        for (let i = 1; i < this.points.length; i++) {
-            const d = this.points[i - 1].distanceTo(this.points[i]);
-            const mid = new THREE.Vector3().lerpVectors(this.points[i - 1], this.points[i], 0.5);
+        // Add labels for segments
+        for (let i = 1; i < drawPoints.length; i++) {
+            const d = drawPoints[i - 1].distanceTo(drawPoints[i]);
+            const mid = new THREE.Vector3().lerpVectors(drawPoints[i - 1], drawPoints[i], 0.5);
             const label = this.createLabel(d);
             label.position.copy(mid);
             label.scale.set(0.25, 0.1, 1);
@@ -120,6 +162,14 @@ export class MeasureManager {
     }
 
     updatePreview(reticlePos) {
+        if (this.isClosed) {
+            if (this.previewLine) {
+                this.scene.remove(this.previewLine);
+                this.previewLine = null;
+            }
+            return;
+        }
+
         // Remove existing preview
         if (this.previewLine) {
             this.scene.remove(this.previewLine);
@@ -151,20 +201,14 @@ export class MeasureManager {
 
     setUnit(unit) {
         this.currentUnit = unit;
-
-        // 1. Update current line labels
         this.updateLine();
-
-        // 2. Update all saved chains
         this.allChains.forEach(chain => {
-            // Remove old labels
             chain.labels.forEach(l => this.scene.remove(l));
             chain.labels = [];
-
-            // Add new labels
-            for (let i = 1; i < chain.points.length; i++) {
-                const d = chain.points[i - 1].distanceTo(chain.points[i]);
-                const mid = new THREE.Vector3().lerpVectors(chain.points[i - 1], chain.points[i], 0.5);
+            const pts = chain.isClosed ? [...chain.points, chain.points[0]] : chain.points;
+            for (let i = 1; i < pts.length; i++) {
+                const d = pts[i - 1].distanceTo(pts[i]);
+                const mid = new THREE.Vector3().lerpVectors(pts[i - 1], pts[i], 0.5);
                 const label = this.createLabel(d);
                 label.position.copy(mid);
                 label.scale.set(0.25, 0.1, 1);
@@ -181,10 +225,8 @@ export class MeasureManager {
         c.fillStyle = 'rgba(0,0,0,0.9)'; c.fillRect(0, 0, 200, 70);
         c.fillStyle = '#fff'; c.font = 'bold 42px system-ui';
         c.textAlign = 'center'; c.textBaseline = 'middle';
-
-        const text = formatDistance(dist, this.currentUnit || 'm'); // Default to m
+        const text = formatDistance(dist, this.currentUnit || 'm');
         c.fillText(text, 100, 35);
-
         return new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cnv), depthTest: false }));
     }
 
@@ -193,11 +235,24 @@ export class MeasureManager {
         for (let i = 1; i < this.points.length; i++) {
             total += this.points[i - 1].distanceTo(this.points[i]);
         }
-        // Add distance to reticle for real-time preview
-        if (liveReticlePos && this.points.length > 0) {
+        if (this.isClosed) {
+            total += this.points[this.points.length - 1].distanceTo(this.points[0]);
+        } else if (liveReticlePos && this.points.length > 0) {
             total += this.points[this.points.length - 1].distanceTo(liveReticlePos);
         }
         return total;
+    }
+
+    getArea() {
+        if (!this.isClosed || this.points.length < 3) return 0;
+        let area = 0;
+        // Shoelace formula in X-Z plane (common for floor measurements)
+        for (let i = 0; i < this.points.length; i++) {
+            const p1 = this.points[i];
+            const p2 = this.points[(i + 1) % this.points.length];
+            area += p1.x * p2.z - p2.x * p1.z;
+        }
+        return Math.abs(area) / 2;
     }
 
     getPointCount() {

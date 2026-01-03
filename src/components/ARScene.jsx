@@ -54,6 +54,11 @@ const ARScene = forwardRef((props, ref) => {
         };
     }, []);
 
+    const propsRef = useRef(props);
+    useEffect(() => {
+        propsRef.current = props;
+    }, [props]);
+
     const initAR = () => {
         const mgr = logicRef.current;
 
@@ -62,11 +67,12 @@ const ARScene = forwardRef((props, ref) => {
             (t, frame) => render(t, frame),
             () => {
                 setStatusText("AR Session Active");
-                if (props.onSessionStart) props.onSessionStart();
+                if (propsRef.current.onSessionStart) propsRef.current.onSessionStart();
             },
             () => {
                 setStatusText("AR Session Ended");
-                if (props.onSessionEnd) props.onSessionEnd();
+                console.log("Triggering onSessionEnd callback...");
+                if (propsRef.current.onSessionEnd) propsRef.current.onSessionEnd();
             }
         );
         mgr.sceneManager.init(props.overlayRoot);
@@ -109,12 +115,15 @@ const ARScene = forwardRef((props, ref) => {
         const session = mgr.sceneManager.getSession();
         mgr.interactionManager.update(frame, session);
 
+        // Update dot animations (pulse)
+        mgr.measureManager.updateAnimations(t);
+
         // Real-time Visuals & UI (Rubber Band)
         const pos = mgr.interactionManager.getReticlePosition();
         mgr.measureManager.updatePreview(pos);
 
         // Dynamic distance update in UI pill
-        if (pos && mgr.measureManager.getPointCount() > 0) {
+        if (pos || mgr.measureManager.getPointCount() > 0) {
             updateUI(pos);
         }
     };
@@ -124,7 +133,12 @@ const ARScene = forwardRef((props, ref) => {
         const dist = mgr.measureManager.getTotalDistance(livePos);
         const text = formatDistance(dist, mgr.currentUnit);
         const count = mgr.measureManager.getPointCount();
-        setStats({ total: text, count });
+
+        // Area calculation
+        const areaVal = mgr.measureManager.getArea();
+        const areaText = areaVal > 0 ? `${areaVal.toFixed(2)} m²` : null;
+
+        setStats({ total: text, count, area: areaText });
     };
 
     useEffect(() => {
