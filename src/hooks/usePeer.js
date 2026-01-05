@@ -71,17 +71,23 @@ export const usePeer = (role, code, arActive = false) => {
     }, []);
 
     const initiateCall = useCallback(async (targetId) => {
-        if (!peer) return;
-        setStatus(`Initiating Screen Share...`);
+        if (!peer) {
+            console.error("❌ Cannot initiate call - peer not ready");
+            setStatus("Error: Not connected to signaling server");
+            return;
+        }
+        console.log("📤 Initiating call to:", targetId);
+        setStatus(`Initiating Screen Share to ${targetId}...`);
         try {
             let stream;
             if (role === 'user') {
                 // 1. Get Screen Share ONLY (Decoupled from Mic)
-                // This ensures we get the video feed even if mic permission fails later
+                console.log("📤 Requesting screen share...");
                 stream = await navigator.mediaDevices.getDisplayMedia({
                     video: { cursor: 'always' },
                     audio: false
                 });
+                console.log("📤 Screen share obtained:", stream.getVideoTracks().length, "video tracks");
             } else {
                 stream = await navigator.mediaDevices.getUserMedia({
                     audio: true,
@@ -90,16 +96,28 @@ export const usePeer = (role, code, arActive = false) => {
             }
 
             localStreamRef.current = stream;
+            console.log("📤 Calling peer:", targetId);
             const outgoingCall = peer.call(targetId, stream);
+
+            if (!outgoingCall) {
+                console.error("❌ peer.call() returned null/undefined");
+                setStatus("Error: Failed to create call");
+                return;
+            }
+
+            console.log("📤 Call created, setting up events...");
             setupCallEvents(outgoingCall);
 
             // Also ensure data connection is established
             if (!conn || !conn.open) {
+                console.log("📤 Creating data connection...");
                 const dataConn = peer.connect(targetId);
                 setupDataEvents(dataConn);
             }
+
+            setStatus("Screen shared - waiting for reviewer to answer...");
         } catch (e) {
-            console.error("Media/Call Error:", e);
+            console.error("❌ Media/Call Error:", e);
             setStatus("Error: " + e.message);
         }
     }, [peer, role, facingMode, arActive, setupCallEvents, setupDataEvents, conn]);
@@ -148,32 +166,33 @@ export const usePeer = (role, code, arActive = false) => {
         });
 
         p.on('call', async (incomingCall) => {
-            console.log("Incoming call...", incomingCall);
+            console.log("📞 Incoming call from:", incomingCall.peer);
+            setStatus("Incoming call - answering...");
+
             try {
                 let stream;
                 if (role === 'user') {
-                    // Start screen share on incoming call if we haven't already
-                    // Note: This might still trigger a gesture requirement in some browsers
+                    // User receiving a call (rare case - usually user initiates)
                     const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                     stream = screenStream;
                 } else {
-                    // REVIEWER ANSWERING LOGIC
-                    // Attempt to get mic, but if it fails, answer ANYWAY to see the user's screen
-                    try {
-                        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                    } catch (err) {
-                        console.warn("Reviewer Mic failed, answering with empty stream to receive video", err);
-                        // Create a dummy stream so we can still accept the call
-                        const canvas = document.createElement('canvas');
-                        stream = canvas.captureStream();
-                    }
+                    // REVIEWER ANSWERING - Answer immediately with minimal stream
+                    // Don't wait for mic - just answer to receive the video
+                    console.log("📞 Reviewer: Answering call immediately");
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 1;
+                    canvas.height = 1;
+                    stream = canvas.captureStream(1); // 1 fps dummy stream
                 }
 
                 localStreamRef.current = stream;
                 incomingCall.answer(stream);
+                console.log("📞 Call answered successfully");
+                setStatus("Call answered - waiting for stream...");
                 setupCallEvents(incomingCall);
             } catch (err) {
-                console.error("Error answering call:", err);
+                console.error("❌ Error answering call:", err);
+                setStatus("Error answering call: " + err.message);
             }
         });
 
