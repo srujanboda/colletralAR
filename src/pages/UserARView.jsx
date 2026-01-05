@@ -94,14 +94,29 @@ const UserARView = () => {
                     </div>
                     <h2 style={{ color: '#fff', fontSize: 24, fontWeight: 800, marginBottom: 12 }}>Ready to Broadcast?</h2>
                     <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 16, maxWidth: 300, marginBottom: 32 }}>
-                        Start Remote Review to share your AR session and audio with the reviewer.
+                        Click below to start. Please select <b>Entire Screen</b> or <b>Tab</b> in the popup.
                     </p>
                     <button
                         onClick={handleStartReview}
                         className="glass-btn glass-btn-primary"
-                        style={{ padding: '16px 40px', borderRadius: 40, fontSize: 18, fontWeight: 900 }}
+                        style={{
+                            width: 80,
+                            height: 80,
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: 0
+                        }}
+                        title="Share Screen"
                     >
-                        Start Remote Review
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M13 3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3"></path>
+                            <polyline points="8 21 12 17 16 21"></polyline>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                            <polyline points="17 8 22 8 22 3"></polyline>
+                            <line x1="22" y1="8" x2="15" y2="15"></line>
+                        </svg>
                     </button>
                     <button onClick={() => navigate('/')} style={{ marginTop: 20, color: '#888', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel</button>
                 </div>

@@ -11,7 +11,7 @@ export const usePeer = (role, code, arActive = false) => {
     const [isDataConnected, setIsDataConnected] = useState(false);
     const localStreamRef = useRef(null);
     const [facingMode, setFacingMode] = useState('environment');
-    const [isMuted, setIsMuted] = useState(false);
+    const [isMuted, setIsMuted] = useState(true);
 
     function getVideoConstraints(mode, isAR) {
         const constraints = {
@@ -72,21 +72,16 @@ export const usePeer = (role, code, arActive = false) => {
 
     const initiateCall = useCallback(async (targetId) => {
         if (!peer) return;
-        setStatus(`Initiating Remote Review...`);
+        setStatus(`Initiating Screen Share...`);
         try {
             let stream;
             if (role === 'user') {
-                // Combine screen share with microphone audio
-                const screenStream = await navigator.mediaDevices.getDisplayMedia({
+                // 1. Get Screen Share ONLY (Decoupled from Mic)
+                // This ensures we get the video feed even if mic permission fails later
+                stream = await navigator.mediaDevices.getDisplayMedia({
                     video: { cursor: 'always' },
                     audio: false
                 });
-                const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-                stream = new MediaStream([
-                    ...screenStream.getVideoTracks(),
-                    ...audioStream.getAudioTracks()
-                ]);
             } else {
                 stream = await navigator.mediaDevices.getUserMedia({
                     audio: true,
@@ -160,10 +155,18 @@ export const usePeer = (role, code, arActive = false) => {
                     // Start screen share on incoming call if we haven't already
                     // Note: This might still trigger a gesture requirement in some browsers
                     const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                    const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    stream = new MediaStream([...screenStream.getVideoTracks(), ...audioStream.getAudioTracks()]);
+                    stream = screenStream;
                 } else {
-                    stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    // REVIEWER ANSWERING LOGIC
+                    // Attempt to get mic, but if it fails, answer ANYWAY to see the user's screen
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    } catch (err) {
+                        console.warn("Reviewer Mic failed, answering with empty stream to receive video", err);
+                        // Create a dummy stream so we can still accept the call
+                        const canvas = document.createElement('canvas');
+                        stream = canvas.captureStream();
+                    }
                 }
 
                 localStreamRef.current = stream;
@@ -197,13 +200,45 @@ export const usePeer = (role, code, arActive = false) => {
         }
     };
 
-    const toggleMic = () => {
-        const nextMuted = !isMuted;
-        setIsMuted(nextMuted);
-        if (localStreamRef.current) {
+    const toggleMic = async () => {
+        // If we already have audio tracks, just toggle 'enabled'
+        if (localStreamRef.current && localStreamRef.current.getAudioTracks().length > 0) {
+            const nextMuted = !isMuted;
+            setIsMuted(nextMuted);
             localStreamRef.current.getAudioTracks().forEach(track => {
                 track.enabled = !nextMuted;
             });
+            return;
+        }
+
+        // If no audio tracks yet (User hasn't granted permission yet), request it now
+        if (role === 'user') {
+            try {
+                const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const audioTrack = audioStream.getAudioTracks()[0];
+
+                // Add to local stream
+                if (localStreamRef.current) {
+                    localStreamRef.current.addTrack(audioTrack);
+                }
+
+                // Add to active Peer Connection
+                if (call && call.peerConnection) {
+                    const senders = call.peerConnection.getSenders();
+                    const audioSender = senders.find(s => s.track?.kind === 'audio');
+                    if (audioSender) {
+                        audioSender.replaceTrack(audioTrack);
+                    } else {
+                        call.peerConnection.addTrack(audioTrack, localStreamRef.current);
+                    }
+                }
+
+                setIsMuted(false);
+                setStatus("Microphone Activated");
+            } catch (e) {
+                console.error("Mic Permission Denied:", e);
+                alert("Microphone permission denied. You can still share your screen.");
+            }
         }
     };
 
