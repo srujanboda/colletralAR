@@ -39,7 +39,16 @@ const UserARView = () => {
     }, [remoteData]);
 
     return (
-        <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden', background: 'transparent' }}>
+        <div style={{
+            position: 'relative',
+            width: '100vw',
+            height: '100vh',
+            overflow: 'hidden',
+            background: 'transparent',
+            border: isBroadcasting ? '4px solid #28a745' : 'none',
+            boxShadow: isBroadcasting ? 'inset 0 0 20px rgba(40,167,69,0.5)' : 'none',
+            boxSizing: 'border-box'
+        }}>
             {/* AR Scene in background */}
             <ARScene
                 ref={arSceneRef}
@@ -66,61 +75,7 @@ const UserARView = () => {
                 }} />
             )}
 
-            {/* Start Overlay (User Gesture Requirement) */}
-            {!isBroadcasting && (
-                <div style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'rgba(0,0,0,0.85)',
-                    backdropFilter: 'blur(15px)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 2000,
-                    textAlign: 'center',
-                    padding: 30
-                }}>
-                    <div style={{
-                        width: 100, height: 100, borderRadius: '50%',
-                        background: 'rgba(0,191,255,0.1)', border: '1px solid rgba(0,191,255,0.3)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24
-                    }}>
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#00BFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="17 8 12 3 7 8"></polyline>
-                            <line x1="12" y1="3" x2="12" y2="15"></line>
-                        </svg>
-                    </div>
-                    <h2 style={{ color: '#fff', fontSize: 24, fontWeight: 800, marginBottom: 12 }}>Ready to Broadcast?</h2>
-                    <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 16, maxWidth: 300, marginBottom: 32 }}>
-                        Click below to start. Please select <b>Entire Screen</b> or <b>Tab</b> in the popup.
-                    </p>
-                    <button
-                        onClick={handleStartReview}
-                        className="glass-btn glass-btn-primary"
-                        style={{
-                            width: 80,
-                            height: 80,
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: 0
-                        }}
-                        title="Share Screen"
-                    >
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M13 3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3"></path>
-                            <polyline points="8 21 12 17 16 21"></polyline>
-                            <line x1="12" y1="17" x2="12" y2="21"></line>
-                            <polyline points="17 8 22 8 22 3"></polyline>
-                            <line x1="22" y1="8" x2="15" y2="15"></line>
-                        </svg>
-                    </button>
-                    <button onClick={() => navigate('/')} style={{ marginTop: 20, color: '#888', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel</button>
-                </div>
-            )}
+
 
             {/* Overlay UI - Top Center Pill */}
             <div className="shiny-pill" style={{
