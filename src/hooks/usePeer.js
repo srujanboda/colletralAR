@@ -211,34 +211,34 @@ export const usePeer = (role, code, arActive = false) => {
             return;
         }
 
-        // If no audio tracks yet (User hasn't granted permission yet), request it now
-        if (role === 'user') {
-            try {
-                const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const audioTrack = audioStream.getAudioTracks()[0];
+        // If no audio tracks yet, request permission now (works for both User and Reviewer)
+        try {
+            const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const audioTrack = audioStream.getAudioTracks()[0];
 
-                // Add to local stream
-                if (localStreamRef.current) {
-                    localStreamRef.current.addTrack(audioTrack);
-                }
-
-                // Add to active Peer Connection
-                if (call && call.peerConnection) {
-                    const senders = call.peerConnection.getSenders();
-                    const audioSender = senders.find(s => s.track?.kind === 'audio');
-                    if (audioSender) {
-                        audioSender.replaceTrack(audioTrack);
-                    } else {
-                        call.peerConnection.addTrack(audioTrack, localStreamRef.current);
-                    }
-                }
-
-                setIsMuted(false);
-                setStatus("Microphone Activated");
-            } catch (e) {
-                console.error("Mic Permission Denied:", e);
-                alert("Microphone permission denied. You can still share your screen.");
+            // Add to local stream (create one if it doesn't exist)
+            if (localStreamRef.current) {
+                localStreamRef.current.addTrack(audioTrack);
+            } else {
+                localStreamRef.current = audioStream;
             }
+
+            // Add to active Peer Connection if exists
+            if (call && call.peerConnection) {
+                const senders = call.peerConnection.getSenders();
+                const audioSender = senders.find(s => s.track?.kind === 'audio');
+                if (audioSender) {
+                    audioSender.replaceTrack(audioTrack);
+                } else {
+                    call.peerConnection.addTrack(audioTrack, localStreamRef.current);
+                }
+            }
+
+            setIsMuted(false);
+            setStatus("Microphone Activated");
+        } catch (e) {
+            console.error("Mic Permission Denied:", e);
+            alert("Microphone permission denied.");
         }
     };
 

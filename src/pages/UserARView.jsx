@@ -219,6 +219,36 @@ const UserARView = () => {
 
             {/* Middle Right Stack - Compacted */}
             <div style={{ position: 'absolute', right: 20, top: '55%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: 12, zIndex: 10 }}>
+                {/* Share Screen Button - Like Zoom/GMeet */}
+                <button
+                    onClick={handleStartReview}
+                    className="glass-btn"
+                    style={{
+                        width: 52,
+                        height: 52,
+                        borderRadius: '50%',
+                        background: isBroadcasting ? 'rgba(40,167,69,0.5)' : 'rgba(0,191,255,0.3)',
+                        borderColor: isBroadcasting ? 'rgba(40,167,69,0.5)' : 'rgba(0,191,255,0.3)',
+                        borderWidth: '2px'
+                    }}
+                    title={isBroadcasting ? "Broadcasting..." : "Share Screen"}
+                >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M13 3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3"></path>
+                        <polyline points="8 21 12 17 16 21"></polyline>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                        {isBroadcasting ? (
+                            <>
+                                <circle cx="18" cy="8" r="4" fill="#28a745" stroke="#28a745"></circle>
+                            </>
+                        ) : (
+                            <>
+                                <polyline points="17 8 22 8 22 3"></polyline>
+                                <line x1="22" y1="8" x2="15" y2="15"></line>
+                            </>
+                        )}
+                    </svg>
+                </button>
                 <button
                     onClick={() => arSceneRef.current?.cycleUnit()}
                     className="glass-btn"
