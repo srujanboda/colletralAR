@@ -29,9 +29,15 @@ export const usePeer = (role, code, arActive = false) => {
     }
 
     const setupCallEvents = useCallback((activeCall) => {
+        console.log("🔧 Setting up call events for:", activeCall.peer);
         setCall(activeCall);
+
         activeCall.on('stream', (stream) => {
-            console.log("Remote Stream received");
+            console.log("🎥 Remote Stream received!", {
+                id: stream.id,
+                videoTracks: stream.getVideoTracks().length,
+                audioTracks: stream.getAudioTracks().length
+            });
             setRemoteStream(stream);
             if (role === 'reviewer') {
                 setStatus(`Connected - Receiving stream from ${activeCall.peer}`);
@@ -39,13 +45,16 @@ export const usePeer = (role, code, arActive = false) => {
                 setStatus(`Connected - Streaming to ${activeCall.peer}`);
             }
         });
+
         activeCall.on('close', () => {
+            console.log("📴 Call closed");
             setStatus("Call Ended");
             setCall(null);
             setRemoteStream(null);
         });
+
         activeCall.on('error', (err) => {
-            console.error("Call error:", err);
+            console.error("❌ Call error:", err);
             setStatus(`Call Error: ${err.message || err.type}`);
         });
     }, [role]);
