@@ -13,7 +13,7 @@ export class SceneManager {
         this.controller = null;
     }
 
-    init(overlayRoot) {
+    init(overlayRoot, container) {
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
 
@@ -24,8 +24,10 @@ export class SceneManager {
         this.renderer.domElement.style.position = 'absolute';
         this.renderer.domElement.style.top = '0';
         this.renderer.domElement.style.left = '0';
-        this.renderer.domElement.style.zIndex = '0'; // Behind UI (which is 1000)
-        document.body.appendChild(this.renderer.domElement);
+        this.renderer.domElement.style.zIndex = '-1';
+
+        const parent = container || document.body;
+        parent.appendChild(this.renderer.domElement);
 
         this.scene.add(new THREE.HemisphereLight(0xffffff, 0xbbbbff, 3));
 

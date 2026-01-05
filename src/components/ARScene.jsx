@@ -75,7 +75,7 @@ const ARScene = forwardRef((props, ref) => {
                 if (propsRef.current.onSessionEnd) propsRef.current.onSessionEnd();
             }
         );
-        mgr.sceneManager.init(props.overlayRoot);
+        mgr.sceneManager.init(props.overlayRoot, containerRef.current);
 
         // Ensure background transparency for AR feed
         if (mgr.sceneManager.renderer) {

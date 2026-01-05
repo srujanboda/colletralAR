@@ -11,6 +11,7 @@ export const usePeer = (role, code, arActive = false) => {
     const [isDataConnected, setIsDataConnected] = useState(false);
     const localStreamRef = useRef(null);
     const [facingMode, setFacingMode] = useState('environment');
+    const [isMuted, setIsMuted] = useState(false);
 
     function getVideoConstraints(mode, isAR) {
         const constraints = {
@@ -196,6 +197,16 @@ export const usePeer = (role, code, arActive = false) => {
         }
     };
 
+    const toggleMic = () => {
+        const nextMuted = !isMuted;
+        setIsMuted(nextMuted);
+        if (localStreamRef.current) {
+            localStreamRef.current.getAudioTracks().forEach(track => {
+                track.enabled = !nextMuted;
+            });
+        }
+    };
+
     const toggleCamera = async () => {
         if (role === 'user') return; // User is screen sharing, camera flipping is handled by AR session itself
         const nextMode = facingMode === 'user' ? 'environment' : 'user';
@@ -242,5 +253,5 @@ export const usePeer = (role, code, arActive = false) => {
         setStatus("Call Ended Manually");
     };
 
-    return { peer, call, remoteStream, status, endCall, sendData, data, isDataConnected, toggleCamera, facingMode, initiateCall };
+    return { peer, call, remoteStream, status, endCall, sendData, data, isDataConnected, toggleCamera, facingMode, initiateCall, isMuted, toggleMic };
 };
