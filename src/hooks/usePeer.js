@@ -72,10 +72,27 @@ export const usePeer = (role, code, arActive = false) => {
     const startCall = useCallback(async (p, targetId) => {
         setStatus(`Calling ${targetId}...`);
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                audio: true,
-                video: getVideoConstraints(facingMode, arActive)
-            });
+            let stream;
+            if (role === 'user') {
+                // Combine screen share with microphone audio
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { cursor: 'always' },
+                    audio: false // We get audio from microphone separately
+                });
+                const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                stream = new MediaStream([
+                    ...screenStream.getVideoTracks(),
+                    ...audioStream.getAudioTracks()
+                ]);
+            } else {
+                // Reviewer just uses regular camera/mic (though they might not even stream)
+                stream = await navigator.mediaDevices.getUserMedia({
+                    audio: true,
+                    video: getVideoConstraints(facingMode, arActive)
+                });
+            }
+
             localStreamRef.current = stream;
             const outgoingCall = p.call(targetId, stream);
             setupCallEvents(outgoingCall);
@@ -83,9 +100,10 @@ export const usePeer = (role, code, arActive = false) => {
             console.error("Media Error:", e);
             setStatus("Media Error: " + e.message);
         }
-    }, [facingMode, arActive, setupCallEvents]);
+    }, [role, facingMode, arActive, setupCallEvents]);
 
     const refreshMediaTracks = useCallback(async () => {
+        if (role === 'user') return; // Screen share doesn't need hardware refresh
         try {
             if (localStreamRef.current) {
                 localStreamRef.current.getTracks().forEach(track => track.stop());
@@ -106,7 +124,7 @@ export const usePeer = (role, code, arActive = false) => {
         } catch (e) {
             console.error("Error refreshing media tracks:", e);
         }
-    }, [facingMode, arActive, call]);
+    }, [role, facingMode, arActive, call]);
 
     useEffect(() => {
         if (!code) return;
@@ -131,22 +149,35 @@ export const usePeer = (role, code, arActive = false) => {
             setupDataEvents(dataConn);
         });
 
-        p.on('call', (incomingCall) => {
+        p.on('call', async (incomingCall) => {
             console.log("Incoming call...", incomingCall);
-            navigator.mediaDevices.getUserMedia({
-                audio: true,
-                video: getVideoConstraints(facingMode, arActive)
-            })
-                .then(stream => {
-                    localStreamRef.current = stream;
-                    incomingCall.answer(stream);
-                    setupCallEvents(incomingCall);
-                    setStatus(`Call connected with ${incomingCall.peer}`);
-                })
-                .catch(err => {
-                    console.error("Failed to get media for answering call:", err);
-                    setStatus(`Error answering call: ${err.message}`);
-                });
+            try {
+                let stream;
+                if (role === 'user') {
+                    const screenStream = await navigator.mediaDevices.getDisplayMedia({
+                        video: { cursor: 'always' },
+                        audio: false
+                    });
+                    const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    stream = new MediaStream([
+                        ...screenStream.getVideoTracks(),
+                        ...audioStream.getAudioTracks()
+                    ]);
+                } else {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        audio: true,
+                        video: getVideoConstraints(facingMode, arActive)
+                    });
+                }
+
+                localStreamRef.current = stream;
+                incomingCall.answer(stream);
+                setupCallEvents(incomingCall);
+                setStatus(`Call connected with ${incomingCall.peer}`);
+            } catch (err) {
+                console.error("Failed to get media for answering call:", err);
+                setStatus(`Error answering call: ${err.message}`);
+            }
         });
 
         p.on('disconnected', () => {
@@ -180,6 +211,7 @@ export const usePeer = (role, code, arActive = false) => {
     };
 
     const toggleCamera = async () => {
+        if (role === 'user') return; // User is screen sharing, camera flipping is handled by AR session itself
         const nextMode = facingMode === 'user' ? 'environment' : 'user';
         setFacingMode(nextMode);
         try {
