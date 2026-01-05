@@ -28,6 +28,11 @@ const ReviewerDashboard = () => {
         };
     }, [remoteStream]);
 
+    const handleEndCall = () => {
+        endCall();
+        navigate('/');
+    };
+
     const handleVideoClick = (e) => {
         if (!videoRef.current || !isDataConnected) return;
         const rect = videoRef.current.getBoundingClientRect();
