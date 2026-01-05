@@ -12,17 +12,34 @@ const UserARView = () => {
     const [stats, setStats] = useState({ total: "0.00 m", count: 0 });
     const [arStatus, setArStatus] = useState("Initializing AR...");
     const [showPlan, setShowPlan] = useState(false);
+    const [isBroadcasting, setIsBroadcasting] = useState(false);
+    const [pingPos, setPingPos] = useState(null);
 
     // Pass AR active state to usePeer to optimize bandwidth during AR
-    const { status: peerStatus, endCall, sendData, data: remoteData, isDataConnected, toggleCamera, facingMode } = usePeer('user', code, true);
+    const { status: peerStatus, endCall, sendData, data: remoteData, isDataConnected, toggleCamera, facingMode, initiateCall, call } = usePeer('user', code, true);
+
+    const handleStartReview = async () => {
+        const targetId = `${code}-reviewer`;
+        await initiateCall(targetId);
+        setIsBroadcasting(true);
+    };
 
     const handleEndCall = () => {
         endCall();
+        setIsBroadcasting(false);
         navigate('/');
     };
 
+    // Listen for Pings
+    useEffect(() => {
+        if (remoteData?.type === 'ping') {
+            setPingPos({ x: remoteData.x, y: remoteData.y });
+            setTimeout(() => setPingPos(null), 1000);
+        }
+    }, [remoteData]);
+
     return (
-        <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden', background: 'transparent' }}>
+        <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden', background: '#000' }}>
             {/* AR Scene in background */}
             <ARScene
                 ref={arSceneRef}
@@ -30,6 +47,65 @@ const UserARView = () => {
                 onStatsUpdate={setStats}
                 onSessionEnd={() => navigate('/')}
             />
+
+            {/* Ripple Ping Animation */}
+            {pingPos && (
+                <div style={{
+                    position: 'absolute',
+                    left: `${pingPos.x}%`,
+                    top: `${pingPos.y}%`,
+                    width: 100,
+                    height: 100,
+                    transform: 'translate(-50%, -50%)',
+                    borderRadius: '50%',
+                    border: '4px solid #00BFFF',
+                    boxShadow: '0 0 40px #00BFFF',
+                    zIndex: 9999,
+                    animation: 'ripple 1s ease-out forwards',
+                    pointerEvents: 'none'
+                }} />
+            )}
+
+            {/* Start Overlay (User Gesture Requirement) */}
+            {!isBroadcasting && (
+                <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'rgba(0,0,0,0.85)',
+                    backdropFilter: 'blur(15px)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 2000,
+                    textAlign: 'center',
+                    padding: 30
+                }}>
+                    <div style={{
+                        width: 100, height: 100, borderRadius: '50%',
+                        background: 'rgba(0,191,255,0.1)', border: '1px solid rgba(0,191,255,0.3)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24
+                    }}>
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#00BFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <h2 style={{ color: '#fff', fontSize: 24, fontWeight: 800, marginBottom: 12 }}>Ready to Broadcast?</h2>
+                    <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 16, maxWidth: 300, marginBottom: 32 }}>
+                        Start Remote Review to share your AR session and audio with the reviewer.
+                    </p>
+                    <button
+                        onClick={handleStartReview}
+                        className="glass-btn glass-btn-primary"
+                        style={{ padding: '16px 40px', borderRadius: 40, fontSize: 18, fontWeight: 900 }}
+                    >
+                        Start Remote Review
+                    </button>
+                    <button onClick={() => navigate('/')} style={{ marginTop: 20, color: '#888', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel</button>
+                </div>
+            )}
 
             {/* Overlay UI - Top Center Pill */}
             <div className="shiny-pill" style={{
@@ -46,7 +122,18 @@ const UserARView = () => {
                 flexDirection: 'column',
                 gap: 2
             }}>
-                <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.45)', letterSpacing: '2px', marginBottom: 2, textTransform: 'uppercase' }}>Session Distance</div>
+                {/* Live Indicator Pillar */}
+                <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    marginBottom: 4, padding: '2px 8px', borderRadius: 10, background: 'rgba(0,0,0,0.3)'
+                }}>
+                    <div className="pulse-dot" style={{ width: 6, height: 6, borderRadius: '50%', background: isBroadcasting ? '#ff4d4d' : '#888' }}></div>
+                    <span style={{ fontSize: 9, fontWeight: 900, color: isBroadcasting ? '#ff4d4d' : '#888', letterSpacing: '1px' }}>
+                        {isBroadcasting ? 'BROADCASTING' : 'OFFLINE'}
+                    </span>
+                </div>
+
+                <div style={{ fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: '2px', textTransform: 'uppercase' }}>Session Distance</div>
                 <div style={{
                     fontSize: 28, fontWeight: 700, color: '#4da6ff', display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4,
                     textShadow: '0 0 20px rgba(0,123,255,0.3)'

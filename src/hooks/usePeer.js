@@ -69,15 +69,16 @@ export const usePeer = (role, code, arActive = false) => {
         });
     }, []);
 
-    const startCall = useCallback(async (p, targetId) => {
-        setStatus(`Calling ${targetId}...`);
+    const initiateCall = useCallback(async (targetId) => {
+        if (!peer) return;
+        setStatus(`Initiating Remote Review...`);
         try {
             let stream;
             if (role === 'user') {
                 // Combine screen share with microphone audio
                 const screenStream = await navigator.mediaDevices.getDisplayMedia({
                     video: { cursor: 'always' },
-                    audio: false // We get audio from microphone separately
+                    audio: false
                 });
                 const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
@@ -86,7 +87,6 @@ export const usePeer = (role, code, arActive = false) => {
                     ...audioStream.getAudioTracks()
                 ]);
             } else {
-                // Reviewer just uses regular camera/mic (though they might not even stream)
                 stream = await navigator.mediaDevices.getUserMedia({
                     audio: true,
                     video: getVideoConstraints(facingMode, arActive)
@@ -94,13 +94,19 @@ export const usePeer = (role, code, arActive = false) => {
             }
 
             localStreamRef.current = stream;
-            const outgoingCall = p.call(targetId, stream);
+            const outgoingCall = peer.call(targetId, stream);
             setupCallEvents(outgoingCall);
+
+            // Also ensure data connection is established
+            if (!conn || !conn.open) {
+                const dataConn = peer.connect(targetId);
+                setupDataEvents(dataConn);
+            }
         } catch (e) {
-            console.error("Media Error:", e);
-            setStatus("Media Error: " + e.message);
+            console.error("Media/Call Error:", e);
+            setStatus("Error: " + e.message);
         }
-    }, [role, facingMode, arActive, setupCallEvents]);
+    }, [peer, role, facingMode, arActive, setupCallEvents, setupDataEvents, conn]);
 
     const refreshMediaTracks = useCallback(async () => {
         if (role === 'user') return; // Screen share doesn't need hardware refresh
@@ -135,13 +141,9 @@ export const usePeer = (role, code, arActive = false) => {
 
         p.on('open', (id) => {
             console.log("Peer opened with ID:", id);
-            setStatus(role === 'reviewer' ? "Waiting for someone to join..." : "Ready to call...");
+            setStatus(role === 'reviewer' ? "Waiting for someone to join..." : "Ready to start review...");
             setPeer(p);
-            if (role === 'user') {
-                startCall(p, targetId);
-                const dataConn = p.connect(targetId);
-                setupDataEvents(dataConn);
-            }
+            // DO NOT auto-call for user anymore to satisfy gesture requirement
         });
 
         p.on('connection', (dataConn) => {
@@ -154,49 +156,33 @@ export const usePeer = (role, code, arActive = false) => {
             try {
                 let stream;
                 if (role === 'user') {
-                    const screenStream = await navigator.mediaDevices.getDisplayMedia({
-                        video: { cursor: 'always' },
-                        audio: false
-                    });
+                    // Start screen share on incoming call if we haven't already
+                    // Note: This might still trigger a gesture requirement in some browsers
+                    const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                     const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    stream = new MediaStream([
-                        ...screenStream.getVideoTracks(),
-                        ...audioStream.getAudioTracks()
-                    ]);
+                    stream = new MediaStream([...screenStream.getVideoTracks(), ...audioStream.getAudioTracks()]);
                 } else {
-                    stream = await navigator.mediaDevices.getUserMedia({
-                        audio: true,
-                        video: getVideoConstraints(facingMode, arActive)
-                    });
+                    stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 }
 
                 localStreamRef.current = stream;
                 incomingCall.answer(stream);
                 setupCallEvents(incomingCall);
-                setStatus(`Call connected with ${incomingCall.peer}`);
             } catch (err) {
-                console.error("Failed to get media for answering call:", err);
-                setStatus(`Error answering call: ${err.message}`);
+                console.error("Error answering call:", err);
             }
         });
 
-        p.on('disconnected', () => {
-            setStatus("Disconnected from server. Retrying...");
-            p.reconnect();
-        });
-
+        p.on('disconnected', () => p.reconnect());
         p.on('error', (err) => {
             console.error("Peer Error:", err);
-            setStatus(`Error: ${err.type}`);
             if (err.type === 'peer-unavailable') {
-                setStatus(role === 'user' ? "Reviewer not online yet..." : "User not found...");
+                setStatus(role === 'user' ? "Reviewer not online..." : "User not found...");
             }
         });
 
-        return () => {
-            p.destroy();
-        };
-    }, [role, code, startCall, setupCallEvents, setupDataEvents, facingMode, arActive]);
+        return () => p.destroy();
+    }, [role, code, setupCallEvents, setupDataEvents, facingMode, arActive]);
 
     useEffect(() => {
         if (role === 'user' && call && call.peerConnection) {
@@ -256,5 +242,5 @@ export const usePeer = (role, code, arActive = false) => {
         setStatus("Call Ended Manually");
     };
 
-    return { peer, call, remoteStream, status, endCall, sendData, data, isDataConnected, toggleCamera, facingMode };
+    return { peer, call, remoteStream, status, endCall, sendData, data, isDataConnected, toggleCamera, facingMode, initiateCall };
 };

@@ -28,9 +28,14 @@ const ReviewerDashboard = () => {
         };
     }, [remoteStream]);
 
-    const handleEndCall = () => {
-        endCall();
-        navigate('/');
+    const handleVideoClick = (e) => {
+        if (!videoRef.current || !isDataConnected) return;
+        const rect = videoRef.current.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+        console.log("Sending Ping:", { x, y });
+        sendData({ type: 'ping', x, y });
     };
 
     return (
@@ -82,7 +87,12 @@ const ReviewerDashboard = () => {
                     overflow: 'hidden'
                 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                        <h3 style={{ margin: 0, color: '#fff' }}>User View</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <h3 style={{ margin: 0, color: '#fff' }}>User View</h3>
+                            <span style={{ fontSize: 10, color: '#888', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: 4 }}>
+                                Tip: Click video to "Ping" user
+                            </span>
+                        </div>
                         {remoteStream && (
                             <div style={{
                                 display: 'flex',
@@ -114,13 +124,15 @@ const ReviewerDashboard = () => {
                         overflow: 'hidden',
                         boxShadow: '0 0 20px rgba(0,123,255,0.1)',
                         margin: '0 auto',
-                        position: 'relative'
+                        position: 'relative',
+                        cursor: isDataConnected ? 'crosshair' : 'default'
                     }}>
                         {remoteStream ? (
                             <video
                                 ref={videoRef}
                                 autoPlay
                                 playsInline
+                                onClick={handleVideoClick}
                                 style={{
                                     width: '100%',
                                     height: '100%',
