@@ -154,10 +154,16 @@ export const usePeer = (role, code, arActive = false) => {
         const p = new Peer(myId);
 
         p.on('open', (id) => {
-            console.log("Peer opened with ID:", id);
-            setStatus(role === 'reviewer' ? "Waiting for someone to join..." : "Ready to start review...");
+            console.log("✅ Peer opened with ID:", id);
+            setStatus(role === 'reviewer' ? "Waiting for someone to join..." : "Ready - connecting to reviewer...");
             setPeer(p);
-            // DO NOT auto-call for user anymore to satisfy gesture requirement
+
+            // Auto-connect DATA channel for presence detection (no gesture required)
+            if (role === 'user') {
+                console.log("📤 User: Auto-connecting data channel to reviewer...");
+                const dataConn = p.connect(targetId);
+                setupDataEvents(dataConn);
+            }
         });
 
         p.on('connection', (dataConn) => {
