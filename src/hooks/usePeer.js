@@ -79,57 +79,85 @@ export const usePeer = (role, code, arActive = false) => {
         });
     }, []);
 
+    // Handle special messages for video streaming coordination
+    const handleStreamCoordination = useCallback((message) => {
+        if (!peer) return;
+
+        if (message.type === 'READY_TO_STREAM' && role === 'reviewer') {
+            // User is ready to stream - Reviewer should call them
+            console.log("📞 User ready to stream, Reviewer initiating call...");
+            setStatus("User ready - connecting video...");
+
+            // Create minimal stream to initiate call
+            const canvas = document.createElement('canvas');
+            canvas.width = 1;
+            canvas.height = 1;
+            const dummyStream = canvas.captureStream(1);
+
+            const outgoingCall = peer.call(message.userId, dummyStream);
+            if (outgoingCall) {
+                console.log("📞 Reviewer: Call initiated to User");
+                setupCallEvents(outgoingCall);
+            }
+        }
+
+        if (message.type === 'CALL_REQUEST' && role === 'user') {
+            // Reviewer is requesting video - User should share screen
+            console.log("📞 Reviewer requesting stream, User initiating screen share...");
+        }
+    }, [peer, role, setupCallEvents]);
+
     const initiateCall = useCallback(async (targetId) => {
         if (!peer) {
             console.error("❌ Cannot initiate call - peer not ready");
             setStatus("Error: Not connected to signaling server");
             return;
         }
-        console.log("📤 Initiating call to:", targetId);
-        setStatus(`Initiating Screen Share to ${targetId}...`);
+        console.log("📤 Initiating screen share...");
+        setStatus(`Getting screen share...`);
         try {
             let stream;
             if (role === 'user') {
-                // 1. Get Screen Share ONLY (Decoupled from Mic)
+                // 1. Get Screen Share ONLY
                 console.log("📤 Requesting screen share...");
                 stream = await navigator.mediaDevices.getDisplayMedia({
                     video: { cursor: 'always' },
                     audio: false
                 });
                 console.log("📤 Screen share obtained:", stream.getVideoTracks().length, "video tracks");
+
+                // Store the stream for when we answer the call
+                localStreamRef.current = stream;
+
+                // 2. Notify Reviewer via data channel that we're ready
+                if (conn && conn.open) {
+                    console.log("📤 Sending READY_TO_STREAM to Reviewer...");
+                    conn.send({
+                        type: 'READY_TO_STREAM',
+                        userId: `${code}-user`
+                    });
+                    setStatus("Ready - waiting for Reviewer to connect video...");
+                } else {
+                    console.error("❌ Data connection not open, can't notify Reviewer");
+                    setStatus("Error: Not connected to Reviewer");
+                }
             } else {
+                // Reviewer initiating (shouldn't normally happen)
                 stream = await navigator.mediaDevices.getUserMedia({
                     audio: true,
                     video: getVideoConstraints(facingMode, arActive)
                 });
+                localStreamRef.current = stream;
+                const outgoingCall = peer.call(targetId, stream);
+                if (outgoingCall) {
+                    setupCallEvents(outgoingCall);
+                }
             }
-
-            localStreamRef.current = stream;
-            console.log("📤 Calling peer:", targetId);
-            const outgoingCall = peer.call(targetId, stream);
-
-            if (!outgoingCall) {
-                console.error("❌ peer.call() returned null/undefined");
-                setStatus("Error: Failed to create call");
-                return;
-            }
-
-            console.log("📤 Call created, setting up events...");
-            setupCallEvents(outgoingCall);
-
-            // Also ensure data connection is established
-            if (!conn || !conn.open) {
-                console.log("📤 Creating data connection...");
-                const dataConn = peer.connect(targetId);
-                setupDataEvents(dataConn);
-            }
-
-            setStatus("Screen shared - waiting for reviewer to answer...");
         } catch (e) {
             console.error("❌ Media/Call Error:", e);
             setStatus("Error: " + e.message);
         }
-    }, [peer, role, facingMode, arActive, setupCallEvents, setupDataEvents, conn]);
+    }, [peer, role, facingMode, arActive, setupCallEvents, conn, code]);
 
     const refreshMediaTracks = useCallback(async () => {
         if (role === 'user') return; // Screen share doesn't need hardware refresh
@@ -180,6 +208,7 @@ export const usePeer = (role, code, arActive = false) => {
             setupDataEvents(dataConn);
         });
 
+
         p.on('call', async (incomingCall) => {
             console.log("📞 Incoming call from:", incomingCall.peer);
             setStatus("Incoming call - answering...");
@@ -187,23 +216,29 @@ export const usePeer = (role, code, arActive = false) => {
             try {
                 let stream;
                 if (role === 'user') {
-                    // User receiving a call (rare case - usually user initiates)
-                    const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                    stream = screenStream;
+                    // User receiving call from Reviewer
+                    // Use the screen share we already captured
+                    if (localStreamRef.current && localStreamRef.current.getVideoTracks().length > 0) {
+                        console.log("📞 User: Answering with existing screen share");
+                        stream = localStreamRef.current;
+                    } else {
+                        // Fallback: request screen share if not already captured
+                        console.log("📞 User: No screen share found, requesting new one...");
+                        stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                        localStreamRef.current = stream;
+                    }
                 } else {
                     // REVIEWER ANSWERING - Answer immediately with minimal stream
-                    // Don't wait for mic - just answer to receive the video
                     console.log("📞 Reviewer: Answering call immediately");
                     const canvas = document.createElement('canvas');
                     canvas.width = 1;
                     canvas.height = 1;
-                    stream = canvas.captureStream(1); // 1 fps dummy stream
+                    stream = canvas.captureStream(1);
                 }
 
-                localStreamRef.current = stream;
                 incomingCall.answer(stream);
-                console.log("📞 Call answered successfully");
-                setStatus("Call answered - waiting for stream...");
+                console.log("📞 Call answered successfully with", stream.getVideoTracks().length, "video tracks");
+                setStatus("Call answered - streaming...");
                 setupCallEvents(incomingCall);
             } catch (err) {
                 console.error("❌ Error answering call:", err);
@@ -221,6 +256,13 @@ export const usePeer = (role, code, arActive = false) => {
 
         return () => p.destroy();
     }, [role, code, setupCallEvents, setupDataEvents, facingMode, arActive]);
+
+    // Handle stream coordination messages
+    useEffect(() => {
+        if (data && data.type === 'READY_TO_STREAM') {
+            handleStreamCoordination(data);
+        }
+    }, [data, handleStreamCoordination]);
 
     useEffect(() => {
         if (role === 'user' && call && call.peerConnection) {
