@@ -188,7 +188,43 @@ export const usePeer = (role, code, arActive = false) => {
         const myId = role === 'reviewer' ? `${code}-reviewer` : `${code}-user`;
         const targetId = role === 'reviewer' ? `${code}-user` : `${code}-reviewer`;
         setStatus("Connecting to Server...");
-        const p = new Peer(myId);
+
+        // ICE servers configuration for better NAT traversal
+        // Using free Metered.ca TURN servers and Google STUN
+        const iceServers = [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun.relay.metered.ca:80' },
+            // Free TURN servers from Metered.ca (limited but works for testing)
+            {
+                urls: 'turn:global.relay.metered.ca:80',
+                username: 'e8dd65d92ae694a9bcc80ac9',
+                credential: 'uIXtdBQrv1LjHkLp'
+            },
+            {
+                urls: 'turn:global.relay.metered.ca:80?transport=tcp',
+                username: 'e8dd65d92ae694a9bcc80ac9',
+                credential: 'uIXtdBQrv1LjHkLp'
+            },
+            {
+                urls: 'turn:global.relay.metered.ca:443',
+                username: 'e8dd65d92ae694a9bcc80ac9',
+                credential: 'uIXtdBQrv1LjHkLp'
+            },
+            {
+                urls: 'turns:global.relay.metered.ca:443?transport=tcp',
+                username: 'e8dd65d92ae694a9bcc80ac9',
+                credential: 'uIXtdBQrv1LjHkLp'
+            }
+        ];
+
+        const p = new Peer(myId, {
+            config: {
+                iceServers: iceServers
+            },
+            debug: 2 // Enable debug logging
+        });
 
         p.on('open', (id) => {
             console.log("✅ Peer opened with ID:", id);

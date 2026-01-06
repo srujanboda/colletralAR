@@ -3,7 +3,6 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import ARScene from '../components/ARScene';
 import PlanParser from '../components/PlanParser';
 import { usePeer } from '../hooks/usePeer';
-import { useDaily } from '../hooks/useDaily';
 
 const UserARView = () => {
     const [searchParams] = useSearchParams();
@@ -13,44 +12,38 @@ const UserARView = () => {
     const [stats, setStats] = useState({ total: "0.00 m", count: 0 });
     const [arStatus, setArStatus] = useState("Initializing AR...");
     const [showPlan, setShowPlan] = useState(false);
+    const [isBroadcasting, setIsBroadcasting] = useState(false);
     const [pingPos, setPingPos] = useState(null);
 
-    // PeerJS for data sync (Plan Parser, pings) - this works!
-    const { sendData, data: remoteData, isDataConnected, isMuted, toggleMic: peerToggleMic } = usePeer('user', code, true);
-
-    // Daily.co for screen sharing - reliable video!
-    const {
-        status: dailyStatus,
-        isJoined,
-        isScreenSharing,
-        startScreenShare,
-        stopScreenShare,
-        leaveRoom,
-        toggleMic: dailyToggleMic
-    } = useDaily(code, 'user');
+    // PeerJS for data sync AND video streaming (with TURN servers now!)
+    const { peer, status: peerStatus, endCall, sendData, data: remoteData, isDataConnected, initiateCall, isMuted, toggleMic } = usePeer('user', code, true);
 
     const [shareStatus, setShareStatus] = useState('');
 
-    // Start screen share via Daily.co
+    // Start screen share via PeerJS
     const handleStartReview = async () => {
-        if (!isJoined) {
-            setShareStatus('⏳ Connecting to Daily...');
+        if (!peer) {
+            setShareStatus('⏳ Connecting...');
+            setTimeout(handleStartReview, 1000);
             return;
         }
 
         setShareStatus('📤 Starting share...');
+        const targetId = `${code}-reviewer`;
 
-        const success = await startScreenShare();
-        if (success) {
+        try {
+            await initiateCall(targetId);
             setShareStatus('✅ Broadcasting');
-        } else {
-            setShareStatus('❌ Failed to share');
+            setIsBroadcasting(true);
+        } catch (err) {
+            setShareStatus('❌ Error: ' + err.message);
+            console.error("Share Screen error:", err);
         }
     };
 
     const handleEndCall = () => {
-        stopScreenShare();
-        leaveRoom();
+        endCall();
+        setIsBroadcasting(false);
         navigate('/');
     };
 
@@ -69,8 +62,8 @@ const UserARView = () => {
             height: '100vh',
             overflow: 'hidden',
             background: 'transparent',
-            border: isScreenSharing ? '4px solid #28a745' : 'none',
-            boxShadow: isScreenSharing ? 'inset 0 0 20px rgba(40,167,69,0.5)' : 'none',
+            border: isBroadcasting ? '4px solid #28a745' : 'none',
+            boxShadow: isBroadcasting ? 'inset 0 0 20px rgba(40,167,69,0.5)' : 'none',
             boxSizing: 'border-box'
         }}>
             {/* AR Scene in background */}
@@ -202,22 +195,22 @@ const UserARView = () => {
                 <button
                     onClick={handleStartReview}
                     className="glass-btn"
-                    disabled={isScreenSharing}
+                    disabled={isBroadcasting}
                     style={{
                         width: 52,
                         height: 52,
                         borderRadius: '50%',
-                        background: isScreenSharing ? 'rgba(40,167,69,0.5)' : 'rgba(0,191,255,0.3)',
-                        borderColor: isScreenSharing ? 'rgba(40,167,69,0.5)' : 'rgba(0,191,255,0.3)',
+                        background: isBroadcasting ? 'rgba(40,167,69,0.5)' : 'rgba(0,191,255,0.3)',
+                        borderColor: isBroadcasting ? 'rgba(40,167,69,0.5)' : 'rgba(0,191,255,0.3)',
                         borderWidth: '2px'
                     }}
-                    title={isScreenSharing ? "Broadcasting..." : "Share Screen"}
+                    title={isBroadcasting ? "Broadcasting..." : "Share Screen"}
                 >
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M13 3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3"></path>
                         <polyline points="8 21 12 17 16 21"></polyline>
                         <line x1="12" y1="17" x2="12" y2="21"></line>
-                        {isScreenSharing ? (
+                        {isBroadcasting ? (
                             <>
                                 <circle cx="18" cy="8" r="4" fill="#28a745" stroke="#28a745"></circle>
                             </>

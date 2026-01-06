@@ -2,38 +2,28 @@ import React, { useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import PlanParser from '../components/PlanParser';
 import { usePeer } from '../hooks/usePeer';
-import { useDaily } from '../hooks/useDaily';
 
 const ReviewerDashboard = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const code = searchParams.get('code');
 
-    // PeerJS for data sync (Plan Parser, pings) - this works!
-    const { sendData, data: remoteData, isDataConnected, isMuted: peerMuted, toggleMic: peerToggleMic } = usePeer('reviewer', code);
-
-    // Daily.co for receiving video stream - reliable!
-    const {
-        status: dailyStatus,
-        isJoined,
-        remoteVideoTrack,
-        participants,
-        leaveRoom,
-        toggleMic: dailyToggleMic,
-        bindVideoElement
-    } = useDaily(code, 'reviewer');
+    // PeerJS for data sync AND video receiving (with TURN servers now!)
+    const { status, remoteStream, endCall, sendData, data: remoteData, isDataConnected, isMuted, toggleMic } = usePeer('reviewer', code);
 
     const videoRef = useRef(null);
 
-    // Bind remote video track to video element
     useEffect(() => {
-        if (videoRef.current) {
-            bindVideoElement(videoRef.current);
+        if (remoteStream && videoRef.current) {
+            videoRef.current.srcObject = remoteStream;
         }
-    }, [remoteVideoTrack, bindVideoElement]);
+        return () => {
+            if (videoRef.current) videoRef.current.srcObject = null;
+        };
+    }, [remoteStream]);
 
     const handleEndCall = () => {
-        leaveRoom();
+        endCall();
         navigate('/');
     };
 
@@ -62,7 +52,7 @@ const ReviewerDashboard = () => {
 
                     {/* Mic Toggle */}
                     <button
-                        onClick={peerToggleMic}
+                        onClick={toggleMic}
                         className="glass-btn"
                         style={{
                             width: 44,
@@ -72,12 +62,12 @@ const ReviewerDashboard = () => {
                             alignItems: 'center',
                             justifyContent: 'center',
                             padding: 0,
-                            background: peerMuted ? 'rgba(255,255,255,0.1)' : 'rgba(0,123,255,0.3)',
+                            background: isMuted ? 'rgba(255,255,255,0.1)' : 'rgba(0,123,255,0.3)',
                             border: '1px solid rgba(255,255,255,0.1)'
                         }}
-                        title={peerMuted ? "Unmute" : "Mute"}
+                        title={isMuted ? "Unmute" : "Mute"}
                     >
-                        {peerMuted ? (
+                        {isMuted ? (
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <line x1="1" y1="1" x2="23" y2="23"></line>
                                 <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path>
@@ -142,7 +132,7 @@ const ReviewerDashboard = () => {
                                 Tip: Click video to "Ping" user
                             </span>
                         </div>
-                        {remoteVideoTrack && (
+                        {remoteStream && (
                             <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -177,7 +167,7 @@ const ReviewerDashboard = () => {
                         cursor: isDataConnected ? 'crosshair' : 'default',
                         border: '1px solid rgba(255,255,255,0.05)'
                     }}>
-                        {remoteVideoTrack ? (
+                        {remoteStream ? (
                             <video
                                 ref={videoRef}
                                 autoPlay
@@ -255,3 +245,4 @@ const ReviewerDashboard = () => {
 };
 
 export default ReviewerDashboard;
+
