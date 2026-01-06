@@ -222,21 +222,6 @@ const UserARView = () => {
                         )}
                     </svg>
                 </button>
-                {/* Share Status Indicator */}
-                {shareStatus && (
-                    <div style={{
-                        fontSize: 10,
-                        color: '#fff',
-                        background: 'rgba(0,0,0,0.6)',
-                        padding: '4px 8px',
-                        borderRadius: 8,
-                        whiteSpace: 'nowrap',
-                        maxWidth: 80,
-                        textAlign: 'center'
-                    }}>
-                        {shareStatus}
-                    </div>
-                )}
                 <button
                     onClick={() => arSceneRef.current?.cycleUnit()}
                     className="glass-btn"

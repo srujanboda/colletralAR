@@ -233,9 +233,25 @@ export const usePeer = (role, code, arActive = false) => {
 
             // Auto-connect DATA channel for presence detection (no gesture required)
             if (role === 'user') {
-                console.log("📤 User: Auto-connecting data channel to reviewer...");
-                const dataConn = p.connect(targetId);
-                setupDataEvents(dataConn);
+                const connectDataChannel = (retries = 5) => {
+                    console.log(`📤 User: Attempting data channel connection (${retries} retries left)...`);
+                    const dataConn = p.connect(targetId);
+
+                    dataConn.on('open', () => {
+                        console.log("✅ Data channel connected to reviewer!");
+                        setupDataEvents(dataConn);
+                    });
+
+                    dataConn.on('error', (err) => {
+                        console.log("❌ Data connection error:", err.type);
+                        if (retries > 0 && err.type === 'peer-unavailable') {
+                            console.log("⏳ Reviewer not ready, retrying in 2 seconds...");
+                            setTimeout(() => connectDataChannel(retries - 1), 2000);
+                        }
+                    });
+                };
+
+                connectDataChannel();
             }
         });
 
