@@ -2,25 +2,38 @@ import React, { useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import PlanParser from '../components/PlanParser';
 import { usePeer } from '../hooks/usePeer';
+import { useDaily } from '../hooks/useDaily';
 
 const ReviewerDashboard = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const code = searchParams.get('code');
-    const { status, remoteStream, endCall, sendData, data: remoteData, isDataConnected, isMuted, toggleMic } = usePeer('reviewer', code);
+
+    // PeerJS for data sync (Plan Parser, pings) - this works!
+    const { sendData, data: remoteData, isDataConnected, isMuted: peerMuted, toggleMic: peerToggleMic } = usePeer('reviewer', code);
+
+    // Daily.co for receiving video stream - reliable!
+    const {
+        status: dailyStatus,
+        isJoined,
+        remoteVideoTrack,
+        participants,
+        leaveRoom,
+        toggleMic: dailyToggleMic,
+        bindVideoElement
+    } = useDaily(code, 'reviewer');
+
     const videoRef = useRef(null);
 
+    // Bind remote video track to video element
     useEffect(() => {
-        if (remoteStream && videoRef.current) {
-            videoRef.current.srcObject = remoteStream;
+        if (videoRef.current) {
+            bindVideoElement(videoRef.current);
         }
-        return () => {
-            if (videoRef.current) videoRef.current.srcObject = null;
-        };
-    }, [remoteStream]);
+    }, [remoteVideoTrack, bindVideoElement]);
 
     const handleEndCall = () => {
-        endCall();
+        leaveRoom();
         navigate('/');
     };
 
@@ -49,7 +62,7 @@ const ReviewerDashboard = () => {
 
                     {/* Mic Toggle */}
                     <button
-                        onClick={toggleMic}
+                        onClick={peerToggleMic}
                         className="glass-btn"
                         style={{
                             width: 44,
@@ -59,12 +72,12 @@ const ReviewerDashboard = () => {
                             alignItems: 'center',
                             justifyContent: 'center',
                             padding: 0,
-                            background: isMuted ? 'rgba(255,255,255,0.1)' : 'rgba(0,123,255,0.3)',
+                            background: peerMuted ? 'rgba(255,255,255,0.1)' : 'rgba(0,123,255,0.3)',
                             border: '1px solid rgba(255,255,255,0.1)'
                         }}
-                        title={isMuted ? "Unmute" : "Mute"}
+                        title={peerMuted ? "Unmute" : "Mute"}
                     >
-                        {isMuted ? (
+                        {peerMuted ? (
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <line x1="1" y1="1" x2="23" y2="23"></line>
                                 <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path>
@@ -129,7 +142,7 @@ const ReviewerDashboard = () => {
                                 Tip: Click video to "Ping" user
                             </span>
                         </div>
-                        {remoteStream && (
+                        {remoteVideoTrack && (
                             <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -164,7 +177,7 @@ const ReviewerDashboard = () => {
                         cursor: isDataConnected ? 'crosshair' : 'default',
                         border: '1px solid rgba(255,255,255,0.05)'
                     }}>
-                        {remoteStream ? (
+                        {remoteVideoTrack ? (
                             <video
                                 ref={videoRef}
                                 autoPlay
