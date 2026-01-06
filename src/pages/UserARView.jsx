@@ -16,12 +16,29 @@ const UserARView = () => {
     const [pingPos, setPingPos] = useState(null);
 
     // Pass AR active state to usePeer to optimize bandwidth during AR
-    const { status: peerStatus, endCall, sendData, data: remoteData, isDataConnected, toggleCamera, facingMode, initiateCall, call, isMuted, toggleMic } = usePeer('user', code, true);
+    const { peer, status: peerStatus, endCall, sendData, data: remoteData, isDataConnected, toggleCamera, facingMode, initiateCall, call, isMuted, toggleMic } = usePeer('user', code, true);
+    const [shareStatus, setShareStatus] = useState('');
 
     const handleStartReview = async () => {
+        // Check if peer is ready
+        if (!peer) {
+            setShareStatus('⏳ Connecting...');
+            // Wait a bit and retry
+            setTimeout(handleStartReview, 1000);
+            return;
+        }
+
+        setShareStatus('📤 Starting share...');
         const targetId = `${code}-reviewer`;
-        await initiateCall(targetId);
-        setIsBroadcasting(true);
+
+        try {
+            await initiateCall(targetId);
+            setShareStatus('✅ Broadcasting');
+            setIsBroadcasting(true);
+        } catch (err) {
+            setShareStatus('❌ Error: ' + err.message);
+            console.error("Share Screen error:", err);
+        }
     };
 
     const handleEndCall = () => {
@@ -173,11 +190,12 @@ const UserARView = () => {
             </div >
 
             {/* Middle Right Stack - Compacted */}
-            <div style={{ position: 'absolute', right: 20, top: '55%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: 12, zIndex: 10 }}>
+            <div style={{ position: 'absolute', right: 20, top: '55%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: 12, zIndex: 10, alignItems: 'center' }}>
                 {/* Share Screen Button - Like Zoom/GMeet */}
                 <button
                     onClick={handleStartReview}
                     className="glass-btn"
+                    disabled={isBroadcasting}
                     style={{
                         width: 52,
                         height: 52,
@@ -204,6 +222,21 @@ const UserARView = () => {
                         )}
                     </svg>
                 </button>
+                {/* Share Status Indicator */}
+                {shareStatus && (
+                    <div style={{
+                        fontSize: 10,
+                        color: '#fff',
+                        background: 'rgba(0,0,0,0.6)',
+                        padding: '4px 8px',
+                        borderRadius: 8,
+                        whiteSpace: 'nowrap',
+                        maxWidth: 80,
+                        textAlign: 'center'
+                    }}>
+                        {shareStatus}
+                    </div>
+                )}
                 <button
                     onClick={() => arSceneRef.current?.cycleUnit()}
                     className="glass-btn"
